@@ -1,5 +1,6 @@
 from rest_framework import generics,status
 from rest_framework.response import Response
+from django.db.models import Q, F
 # Create your views here.
 import datetime
 from .models import Employee, Hashtag
@@ -72,6 +73,34 @@ class HashtagList(generics.ListCreateAPIView):
 #         query_set = Hashtag.objects.all()
 
 #         name = self.request.query_params.get('name')
+
+class EmployeeFilterAPIView(generics.ListAPIView):
+    serializer_class= EmployeeSerializer
+
+    def get_queryset(self):
+        query_set = Employee.objects.all()
+
+        first_name = self.request.query_params.get('first_name')
+        last_name = self.request.query_params.get('last_name')
+        if first_name:
+            query_set = query_set.filter(Q(first_name=first_name) & Q(last_name=last_name))
+
+        employee_id = self.request.query_params.get('employee_id')
+        print(employee_id)
+        if employee_id:
+            query_set = query_set.filter(employee_id=employee_id)
+            print(query_set)
+            query_set = query_set.annotate(name = F('user__username'),email_id = F('user__email')).values('name','email_id')
+            print("query_set:",query_set)
+        return query_set
+            
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        # serializer = self.get_serializer(queryset, many=True)
+        # print(serializer.data)
+        # return Response({"result": serializer.data})
+        return Response({"result": queryset})
+
 
 class HashtagFilterAPIView(generics.ListAPIView):
     serializer_class = HashtagSerializer
