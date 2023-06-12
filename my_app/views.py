@@ -26,41 +26,81 @@ class HashtagList(generics.ListCreateAPIView):
     serializer_class = HashtagSerializer
     queryset = Hashtag.objects.all()
 
-class Hashtagfilter(generics.ListAPIView):
-    serializer_class = HashtagSerializer
+# class Hashtagfilter(generics.ListAPIView):
+#     serializer_class = HashtagSerializer
 
-    def list(self,request):
-        name =  self.request.query_params.get('name') 
-        query = Hashtag.objects.filter(name__icontains = name)
-        serializer = self.get_serializer(query,many=True)
-        return Response({"result":serializer.data})
+#     def list(self,request):
+#         name =  self.request.query_params.get('name') 
+#         query = Hashtag.objects.filter(name__icontains = name)
+#         serializer = self.get_serializer(query,many=True)
+#         return Response({"result":serializer.data})
     
-class filterEmail(generics.ListAPIView):
+# class filterEmail(generics.ListAPIView):
+#     serializer_class = HashtagSerializer
+
+#     def get_queryset(self,request):
+#         email = self.query_params.get('email')
+#         query = Hashtag.objects.filter(created_by__email = email)
+#         # serializer = self.get_serializer(query,many=True)
+#         # return Response({"result:":serializer.data})
+#         return query
+
+# class filterDate(generics.ListAPIView):
+#     serializer_class = HashtagSerializer
+
+#     def list(self,request):
+#         created_at = self.request.query_params.get("created_at")
+#         date = datetime.datetime.strptime(created_at,"%Y-%m-%d")
+#         query = Hashtag.objects.filter(created_at__gt = date)
+#         serializer = self.get_serializer(query,many=True)
+#         return Response({"result":serializer.data})
+
+# class filterDelete(generics.ListAPIView):
+#     serializer_class = HashtagSerializer
+
+#     def list(self,request):
+#         is_delete = self.request.query_params.get("is_delete")
+#         print("is_delete",is_delete)
+#         query = Hashtag.objects.filter(is_delete = is_delete)
+#         serializer = self.get_serializer(query,many=True)
+#         return Response({"result":serializer.data})
+
+# class HashtagFilterAPIView(generics.ListAPIView):
+#     serializer_class = HashtagSerializer
+
+#     def get_queryset(self):
+#         query_set = Hashtag.objects.all()
+
+#         name = self.request.query_params.get('name')
+
+class HashtagFilterAPIView(generics.ListAPIView):
     serializer_class = HashtagSerializer
 
-    def get_queryset(self,request):
-        email = self.query_params.get('email')
-        query = Hashtag.objects.filter(created_by__email = email)
-        # serializer = self.get_serializer(query,many=True)
-        # return Response({"result:":serializer.data})
-        return query
+    def get_queryset(self):
+        queryset = Hashtag.objects.all()
 
-class filterDate(generics.ListAPIView):
-    serializer_class = HashtagSerializer
+        name = self.request.query_params.get('name')
+        if name:
+            queryset = queryset.filter(name__icontains=name)
 
-    def list(self,request):
-        created_at = self.request.query_params.get("created_at")
-        date = datetime.datetime.strptime(created_at,"%Y-%m-%d")
-        query = Hashtag.objects.filter(created_at__gt = date)
-        serializer = self.get_serializer(query,many=True)
-        return Response({"result":serializer.data})
+        email = self.request.query_params.get('email')
+        if email:
+            queryset = queryset.filter(created_by__email=email)
 
-class filterDelete(generics.ListAPIView):
-    serializer_class = HashtagSerializer
+        created_at = self.request.query_params.get('created_at')
+        if created_at:
+            date = datetime.datetime.strptime(created_at, "%Y-%m-%d")
+            queryset = queryset.filter(created_at__gt=date)
 
-    def list(self,request):
-        is_delete = self.request.query_params.get("is_delete")
-        print("is_delete",is_delete)
-        query = Hashtag.objects.filter(is_delete = is_delete)
-        serializer = self.get_serializer(query,many=True)
-        return Response({"result":serializer.data})
+        is_delete = self.request.query_params.get('is_delete')
+        if is_delete:
+            queryset = queryset.filter(is_delete=is_delete)
+
+        return queryset
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({"result": serializer.data})
+    
+    
