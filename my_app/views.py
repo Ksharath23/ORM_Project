@@ -1,10 +1,11 @@
 from rest_framework import generics,status
 from rest_framework.response import Response
+from django.db.models import Q, F, Count
 # Create your views here.
 import datetime
-from .models import Employee, Hashtag
+from .models import Employee, Hashtag, Post
 
-from .serializers import EmployeeSerializer, HashtagSerializer
+from .serializers import EmployeeSerializer, HashtagSerializer, PostSerializer
 
 class EmployeeList(generics.ListCreateAPIView):
     serializer_class = EmployeeSerializer
@@ -22,9 +23,13 @@ class HashtagDetail(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = HashtagSerializer
     queryset = Hashtag.objects.all()
 
-class HashtagList(generics.ListCreateAPIView):
-    serializer_class = HashtagSerializer
-    queryset = Hashtag.objects.all()
+class PostList(generics.ListCreateAPIView):
+    serializer_class = PostSerializer
+    queryset = Post.objects.all()
+
+class PostDetail(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = PostSerializer
+    queryset = Post.objects.all()
 
 # class Hashtagfilter(generics.ListAPIView):
 #     serializer_class = HashtagSerializer
@@ -73,6 +78,34 @@ class HashtagList(generics.ListCreateAPIView):
 
 #         name = self.request.query_params.get('name')
 
+class EmployeeFilterAPIView(generics.ListAPIView):
+    serializer_class= EmployeeSerializer
+
+    def get_queryset(self):
+        query_set = Employee.objects.all()
+
+        first_name = self.request.query_params.get('first_name')
+        last_name = self.request.query_params.get('last_name')
+        if first_name:
+            query_set = query_set.filter(Q(first_name=first_name)| Q(last_name=last_name))
+
+        employee_id = self.request.query_params.get('employee_id')
+        print(employee_id)
+        if employee_id:
+            query_set = query_set.filter(employee_id=employee_id)
+            print(query_set)
+            query_set = query_set.annotate(name = F('user__username'),email_id = F('user__email')).values('name','email_id')
+            print("query_set:",query_set)        
+        return query_set
+            
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        # serializer = self.get_serializer(queryset, many=True)
+        # print(serializer.data)
+        # return Response({"result": serializer.data})
+        return Response({"result": queryset})
+
+
 class HashtagFilterAPIView(generics.ListAPIView):
     serializer_class = HashtagSerializer
 
@@ -95,12 +128,17 @@ class HashtagFilterAPIView(generics.ListAPIView):
         is_delete = self.request.query_params.get('is_delete')
         if is_delete:
             queryset = queryset.filter(is_delete=is_delete)
-
+        
+        created_by = self.request.query_params.get('created_by')
+        print(created_by)
+        if created_by:
+            queryset = queryset.filter(created_by__user__username=created_by)
+        print("query_Set",queryset)
         return queryset
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
         serializer = self.get_serializer(queryset, many=True)
         return Response({"result": serializer.data})
-    
+        # return Response({"result": queryset})
     
