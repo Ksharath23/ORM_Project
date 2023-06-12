@@ -20,3 +20,15 @@ class Hashtag(models.Model):
 
     def __str__(self) :
         return self.name
+    
+class Post(models.Model):
+    post_name = models.CharField(max_length=100,blank=True,null=True)
+    hashtag = models.ManyToManyField(Hashtag)
+    created_by = models.ForeignKey(Employee,on_delete=models.SET_NULL,null=True)
+    created_at = models.DateTimeField(auto_now_add=True,null=True)
+    description = models.TextField(max_length=500,blank=True,null=True)
+    #caption
+    is_delete = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.post_name

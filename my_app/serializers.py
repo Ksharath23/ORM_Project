@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Employee, Hashtag
+from .models import Employee, Hashtag, Post
 
 class EmployeeSerializer(serializers.ModelSerializer):
     class Meta:
@@ -9,4 +9,9 @@ class EmployeeSerializer(serializers.ModelSerializer):
 class HashtagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Hashtag
+        fields = ('__all__')
+
+class PostSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Post
         fields = ('__all__')
