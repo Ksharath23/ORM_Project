@@ -1,5 +1,6 @@
 from django.urls import path, include
 from .views import EmployeeList, EmployeeDetail, HashtagList, HashtagDetail, HashtagFilterAPIView,EmployeeFilterAPIView, PostList, PostDetail, EmployeeCreate
+from .views import PostFilterAPIView
 # Hashtagfilter,filterEmail,filterDelete,filterDate
 from rest_framework import routers
 
@@ -17,6 +18,7 @@ urlpatterns = [
     # path('date/', filterDate.as_view())
     path('hashtags/',HashtagFilterAPIView.as_view()),
     path('employees/',EmployeeFilterAPIView.as_view()),
+    path('posts/',PostFilterAPIView.as_view())
 ]
 
 router = routers.DefaultRouter()

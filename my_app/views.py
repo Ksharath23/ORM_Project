@@ -142,28 +142,33 @@ class HashtagFilterAPIView(generics.ListAPIView):
     def get_queryset(self):
         queryset = Hashtag.objects.all()
 
+
+        filters = Q()
+
         name = self.request.query_params.get('name')
         if name:
-            queryset = queryset.filter(name__icontains=name)
+            filters |= Q(name=name)
 
         email = self.request.query_params.get('email')
         if email:
-            queryset = queryset.filter(created_by__email=email)
+            filters |= Q(email=email)
 
         created_at = self.request.query_params.get('created_at')
         if created_at:
             date = datetime.datetime.strptime(created_at, "%Y-%m-%d")
-            queryset = queryset.filter(created_at__gt=date)
+            filters |= Q(created_at__gt=date)
 
         is_delete = self.request.query_params.get('is_delete')
         if is_delete:
-            queryset = queryset.filter(is_delete=is_delete)
+            filters |= Q(is_delete=is_delete)
         
         created_by = self.request.query_params.get('created_by')
-        print(created_by)
         if created_by:
-            queryset = queryset.filter(created_by__user__username=created_by)
-        print("query_Set",queryset)
+            filters |= Q(created_by=created_by)
+
+        if filters:
+            queryset = queryset.filter(filters)
+        print("query_set:",queryset)
         return queryset
 
     def list(self, request, *args, **kwargs):
@@ -171,4 +176,81 @@ class HashtagFilterAPIView(generics.ListAPIView):
         serializer = self.get_serializer(queryset, many=True)
         return Response({"result": serializer.data})
         # return Response({"result": queryset})
-    
+
+        # name = self.request.query_params.get('name')
+        # if name:
+        #     queryset = queryset.filter(name__icontains=name)
+
+        # email = self.request.query_params.get('email')
+        # if email:
+        #     queryset = queryset.filter(created_by__email=email)
+
+        # created_at = self.request.query_params.get('created_at')
+        # if created_at:
+        #     date = datetime.datetime.strptime(created_at, "%Y-%m-%d")
+        #     queryset = queryset.filter(created_at__gt=date)
+
+        # is_delete = self.request.query_params.get('is_delete')
+        # if is_delete:
+        #     queryset = queryset.filter(is_delete=is_delete)
+        
+        # created_by = self.request.query_params.get('created_by')
+        # print(created_by)
+        # if created_by:
+        #     queryset = queryset.filter(created_by__user__username=created_by)
+        # print("query_Set",queryset)
+        # return queryset
+
+class PostFilterAPIView(generics.ListAPIView):
+    serializer_class = PostSerializer
+
+    def get_queryset(self):
+        queryset = Post.objects.all()
+
+
+        filters = Q()
+
+        post_name = self.request.query_params.get('post_name')
+        # if post_name:
+        #     filters |= Q(post_name=post_name)
+
+        created_by = self.request.query_params.get('created_by')
+        if created_by:
+            filters |= Q(created_by__user__username=created_by)
+
+        hashtag = self.request.query_params.get('hashtag')
+        if hashtag:
+            filters |= Q(hashtag__name=hashtag)
+
+        # created_at = self.request.query_params.get('created_at')
+        # if created_at:
+        #     date = datetime.datetime.strptime(created_at, "%Y-%m-%d")
+        #     filters |= Q(created_at__gt=date)
+
+        # is_delete = self.request.query_params.get('is_delete')
+        # if is_delete:
+        #     filters |= Q(is_delete=is_delete)
+        
+        # created_by = self.request.query_params.get('created_by')
+        # if created_by:
+        #     filters |= Q(created_by=created_by)
+        if post_name:
+            filters &= Q(post_name=post_name)
+            queryset = queryset.annotate(name = F('created_by__user__username'),email_id = F('created_by__user__email')).values('name','email_id')
+
+        post_hash = self.request.query_params.get('post_hash')
+        print("post_hash:",post_hash)
+        if post_hash:
+            filters &= Q(post_name=post_hash)
+            queryset = queryset.annotate(hashtag_name= F('hashtag__name')).values('hashtag_name')
+
+        if filters:
+            queryset = queryset.filter(filters) 
+        print("query_set:",queryset)
+        return queryset
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        # serializer = self.get_serializer(queryset, many=True)
+        # return Response({"result": serializer.data})
+        return Response({"result": queryset})
