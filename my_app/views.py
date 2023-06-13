@@ -7,7 +7,7 @@ import datetime
 from .models import Employee, Hashtag, Post
 
 from .serializers import EmployeeSerializer, HashtagSerializer, PostSerializer
-
+from rest_framework.decorators import APIView
 class EmployeeCreate(viewsets.ModelViewSet):
     queryset = Employee.objects.all()
     serializer_class = EmployeeSerializer
@@ -203,7 +203,6 @@ class HashtagFilterAPIView(generics.ListAPIView):
 
 class PostFilterAPIView(generics.ListAPIView):
     serializer_class = PostSerializer
-
     def get_queryset(self):
         queryset = Post.objects.all()
 
@@ -211,41 +210,28 @@ class PostFilterAPIView(generics.ListAPIView):
         filters = Q()
 
         post_name = self.request.query_params.get('post_name')
-        # if post_name:
-        #     filters |= Q(post_name=post_name)
-
+        
         created_by = self.request.query_params.get('created_by')
-        if created_by:
-            filters |= Q(created_by__user__username=created_by)
 
         hashtag = self.request.query_params.get('hashtag')
-        if hashtag:
-            filters |= Q(hashtag__name=hashtag)
 
-        # created_at = self.request.query_params.get('created_at')
-        # if created_at:
-        #     date = datetime.datetime.strptime(created_at, "%Y-%m-%d")
-        #     filters |= Q(created_at__gt=date)
+        is_delete = self.request.query_params.get('is_delete')
 
-        # is_delete = self.request.query_params.get('is_delete')
-        # if is_delete:
-        #     filters |= Q(is_delete=is_delete)
+        if created_by:
+            filters &= Q(created_by__user__username=created_by)
         
-        # created_by = self.request.query_params.get('created_by')
-        # if created_by:
-        #     filters |= Q(created_by=created_by)
+        if hashtag:
+            filters &= Q(hashtag__name=hashtag)
+
         if post_name:
             filters &= Q(post_name=post_name)
-            queryset = queryset.annotate(name = F('created_by__user__username'),email_id = F('created_by__user__email')).values('name','email_id')
+        #     queryset = queryset.annotate(name = F('created_by__user__username'),email_id = F('created_by__user__email')).values('name','email_id')
 
-        post_hash = self.request.query_params.get('post_hash')
-        print("post_hash:",post_hash)
-        if post_hash:
-            filters &= Q(post_name=post_hash)
-            queryset = queryset.annotate(hashtag_name= F('hashtag__name')).values('hashtag_name')
+        if is_delete:
+            filters &= Q(is_delete=is_delete)
 
         if filters:
-            queryset = queryset.filter(filters) 
+            queryset = queryset.filter(filters).annotate(name=F('created_by__user__username'),email_id = F('created_by__user__email'),hashtag_name= F('hashtag__name')).values()
         print("query_set:",queryset)
         return queryset
 
@@ -254,3 +240,17 @@ class PostFilterAPIView(generics.ListAPIView):
         # serializer = self.get_serializer(queryset, many=True)
         # return Response({"result": serializer.data})
         return Response({"result": queryset})
+    
+
+class PostAPIView(APIView):
+    def post(self,request):
+        post_name = self.request.query_params.get('post_name')
+        hashtag = self.request.query_params.get('hashtag')
+        created_by = self.request.query_params.get('created_by')
+        created_at = self.request.query_params.get('created_at')
+        description = self.request.query_params.get('description')
+        caption =  self.request.query_params.get('caption')
+        is_delete = self.request.query_params.get('is_delete','')
+    
+        object = Post.objects.create(post_name=post_name,hashtag=hashtag,created_by=created_by,created_at=created_at,description=description,caption=caption,is_delete=is_delete)
+    
