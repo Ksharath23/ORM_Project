@@ -26,8 +26,8 @@ class Post(models.Model):
     hashtag = models.ManyToManyField(Hashtag)
     created_by = models.ForeignKey(Employee,on_delete=models.SET_NULL,null=True)
     created_at = models.DateTimeField(auto_now_add=True,null=True)
-    description = models.TextField(max_length=500,blank=True,null=True)
-    #caption
+    description = models.TextField(blank=True,null=True)
+    caption =  models.CharField(max_length=100)   
     is_delete = models.BooleanField(default=False)
 
     def __str__(self):
