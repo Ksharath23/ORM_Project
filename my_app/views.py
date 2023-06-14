@@ -279,20 +279,16 @@ class PostView(APIView):
             return Response(serializer.data)
         return Response(serializer.errors)
 
-
-
-
-
-
 class PostNewView(APIView):
     def get(self,request):
         posts = Post.objects.all()
         data = []
         for post in posts:
             post_data = {
+                'id': post.id,
                 'post_name': post.post_name,
-                'hashtag': [hashtag.name for hashtag in post.hashtag.all()],
-                'created_by': post.created_by.employee_id,
+                'hashtag': [hashtag.id for hashtag in post.hashtag.all()],
+                'created_by': post.created_by.id,
                 'created_at': post.created_at,
                 'description': post.description,
                 'caption': post.caption,
@@ -304,19 +300,21 @@ class PostNewView(APIView):
     def post(self, request):
         # import pdb; pdb.set_trace()
         post_data = {
+           
             'post_name': request.data.get('post_name'),
             # 'hashtag': request.data.get('hashtag'),
             'created_at': request.data.get('created_at'),
+            # 'created_by_id':request.data.get('created_by'),
             'description': request.data.get('description'),
             'caption': request.data.get('caption'),
             'is_delete': request.data.get('is_delete')
         }
-        employee_id = request.data.get('created_by')    
-        try:
-            employee = Employee.objects.get(employee_id=employee_id)
-        except Employee.DoesNotExist:
-            return Response({'error': 'Employee does not exist.'})
-        post_data['created_by'] = employee
+        # employee_id = request.data.get('created_by')    
+        # try:
+        #     employee = Employee.objects.get(employee_id=employee_id)
+        # except Employee.DoesNotExist:
+        #     return Response({'error': 'Employee does not exist.'})
+        # post_data['created_by'] = employee
 
         hashtag = request.data.get('hashtag')
 
@@ -324,4 +322,36 @@ class PostNewView(APIView):
         post.hashtag.add(*hashtag)
         return Response({"post created":"success"})
     
-    # def put(self,request):
+    def put(self, request, format=None):
+        post_id = request.data.get('id')
+        try:
+            post = Post.objects.get(id=post_id)
+        except Post.DoesNotExist:
+            return Response({'error': 'Post does not exist.'})
+        
+        post.post_name = request.data.get('post_name')
+        post.description = request.data.get('description')
+        post.caption = request.data.get('caption')
+        post.is_delete = request.data.get('is_delete')
+        created_by = request.data.get('created_by')
+        # import pdb; pdb.set_trace()
+        if created_by:
+            try:
+                post.created_by = Employee.objects.get(id=created_by)
+            except Employee.DoesNotExist:
+                pass
+
+        hashtag_ids = request.data.get('hashtag')
+        if hashtag_ids:
+            post.hashtag.clear()
+            for hashtag_id in hashtag_ids:
+                try:
+                    hashtag = Hashtag.objects.get(id=hashtag_id)
+                    post.hashtag.add(hashtag)
+                except Hashtag.DoesNotExist:
+                    pass
+        
+        
+        post.save()
+        
+        return Response({"put updated":"success"})
