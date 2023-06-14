@@ -309,17 +309,17 @@ class PostNewView(APIView):
             'caption': request.data.get('caption'),
             'is_delete': request.data.get('is_delete')
         }
-        # employee_id = request.data.get('created_by')    
-        # try:
-        #     employee = Employee.objects.get(employee_id=employee_id)
-        # except Employee.DoesNotExist:
-        #     return Response({'error': 'Employee does not exist.'})
-        # post_data['created_by'] = employee
-
+        # import pdb; pdb.set_trace()
+        created_by = request.data.get('created_by')
+        post_data['created_by'] = Employee.objects.get(id=created_by)
         hashtag = request.data.get('hashtag')
-
         post = Post.objects.create(**post_data)
         post.hashtag.add(*hashtag)
+        # if created_by:
+        #     try:
+        #         post.created_by = Employee.objects.get(id=created_by)
+        #     except Employee.DoesNotExist:
+        #         pass
         return Response({"post created":"success"})
     
     def put(self, request, format=None):
