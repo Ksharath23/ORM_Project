@@ -242,15 +242,86 @@ class PostFilterAPIView(generics.ListAPIView):
         return Response({"result": queryset})
     
 
-class PostAPIView(APIView):
-    def post(self,request):
-        post_name = self.request.query_params.get('post_name')
-        hashtag = self.request.query_params.get('hashtag')
-        created_by = self.request.query_params.get('created_by')
-        created_at = self.request.query_params.get('created_at')
-        description = self.request.query_params.get('description')
-        caption =  self.request.query_params.get('caption')
-        is_delete = self.request.query_params.get('is_delete','')
+# class PostAPIView(APIView):
+#     def post(self,request):
+#         post_name = self.request.query_params.get('post_name')
+#         hashtag = self.request.query_params.get('hashtag')
+#         created_by = self.request.query_params.get('created_by')
+#         created_at = self.request.query_params.get('created_at')
+#         description = self.request.query_params.get('description')
+#         caption =  self.request.query_params.get('caption')
+#         is_delete = self.request.query_params.get('is_delete','')
     
-        object = Post.objects.create(post_name=post_name,hashtag=hashtag,created_by=created_by,created_at=created_at,description=description,caption=caption,is_delete=is_delete)
+#         object = Post.objects.create(post_name=post_name,hashtag=hashtag,created_by=created_by,created_at=created_at,description=description,caption=caption,is_delete=is_delete)
     
+class PostView(APIView):
+    def get(self, request):
+        posts = Post.objects.all()
+        serializer = PostSerializer(posts, many=True)
+        return Response(serializer.data)
+    
+    def post(self, request):
+        serializer = PostSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
+    
+    def put(self, request):
+        try:
+            post = Post.objects.get(id=request.data['id'])
+        except Post.DoesNotExist:
+            return Response({'error': 'Post does not exist.'})
+        
+        serializer = PostSerializer(post, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
+
+
+
+
+
+
+class PostNewView(APIView):
+    def get(self,request):
+        posts = Post.objects.all()
+        data = []
+        for post in posts:
+            post_data = {
+                'post_name': post.post_name,
+                'hashtag': [hashtag.name for hashtag in post.hashtag.all()],
+                'created_by': post.created_by.employee_id,
+                'created_at': post.created_at,
+                'description': post.description,
+                'caption': post.caption,
+                'is_delete': post.is_delete
+            }
+            data.append(post_data)
+        return Response(data)
+
+    def post(self, request):
+        # import pdb; pdb.set_trace()
+        post_data = {
+            'post_name': request.data.get('post_name'),
+            # 'hashtag': request.data.get('hashtag'),
+            'created_at': request.data.get('created_at'),
+            'description': request.data.get('description'),
+            'caption': request.data.get('caption'),
+            'is_delete': request.data.get('is_delete')
+        }
+        employee_id = request.data.get('created_by')    
+        try:
+            employee = Employee.objects.get(employee_id=employee_id)
+        except Employee.DoesNotExist:
+            return Response({'error': 'Employee does not exist.'})
+        post_data['created_by'] = employee
+
+        hashtag = request.data.get('hashtag')
+
+        post = Post.objects.create(**post_data)
+        post.hashtag.add(*hashtag)
+        return Response({"post created":"success"})
+    
+    # def put(self,request):

@@ -10,7 +10,7 @@ class Employee(models.Model):
     email = models.EmailField(blank=True,null=True)
 
     def __str__(self):
-        return self.email
+        return self.employee_id
 
 class Hashtag(models.Model):
     name = models.CharField(max_length=100,blank=True,null=True)
