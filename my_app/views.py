@@ -7,7 +7,7 @@ import datetime
 from .models import Employee, Hashtag, Post
 
 from .serializers import EmployeeSerializer, HashtagSerializer, PostSerializer
-
+from rest_framework.decorators import APIView
 class EmployeeCreate(viewsets.ModelViewSet):
     queryset = Employee.objects.all()
     serializer_class = EmployeeSerializer
@@ -142,28 +142,33 @@ class HashtagFilterAPIView(generics.ListAPIView):
     def get_queryset(self):
         queryset = Hashtag.objects.all()
 
+
+        filters = Q()
+
         name = self.request.query_params.get('name')
         if name:
-            queryset = queryset.filter(name__icontains=name)
+            filters |= Q(name=name)
 
         email = self.request.query_params.get('email')
         if email:
-            queryset = queryset.filter(created_by__email=email)
+            filters |= Q(email=email)
 
         created_at = self.request.query_params.get('created_at')
         if created_at:
             date = datetime.datetime.strptime(created_at, "%Y-%m-%d")
-            queryset = queryset.filter(created_at__gt=date)
+            filters |= Q(created_at__gt=date)
 
         is_delete = self.request.query_params.get('is_delete')
         if is_delete:
-            queryset = queryset.filter(is_delete=is_delete)
+            filters |= Q(is_delete=is_delete)
         
         created_by = self.request.query_params.get('created_by')
-        print(created_by)
         if created_by:
-            queryset = queryset.filter(created_by__user__username=created_by)
-        print("query_Set",queryset)
+            filters |= Q(created_by=created_by)
+
+        if filters:
+            queryset = queryset.filter(filters)
+        print("query_set:",queryset)
         return queryset
 
     def list(self, request, *args, **kwargs):
@@ -171,4 +176,152 @@ class HashtagFilterAPIView(generics.ListAPIView):
         serializer = self.get_serializer(queryset, many=True)
         return Response({"result": serializer.data})
         # return Response({"result": queryset})
+
+        # name = self.request.query_params.get('name')
+        # if name:
+        #     queryset = queryset.filter(name__icontains=name)
+
+        # email = self.request.query_params.get('email')
+        # if email:
+        #     queryset = queryset.filter(created_by__email=email)
+
+        # created_at = self.request.query_params.get('created_at')
+        # if created_at:
+        #     date = datetime.datetime.strptime(created_at, "%Y-%m-%d")
+        #     queryset = queryset.filter(created_at__gt=date)
+
+        # is_delete = self.request.query_params.get('is_delete')
+        # if is_delete:
+        #     queryset = queryset.filter(is_delete=is_delete)
+        
+        # created_by = self.request.query_params.get('created_by')
+        # print(created_by)
+        # if created_by:
+        #     queryset = queryset.filter(created_by__user__username=created_by)
+        # print("query_Set",queryset)
+        # return queryset
+
+class PostFilterAPIView(generics.ListAPIView):
+    serializer_class = PostSerializer
+    def get_queryset(self):
+        queryset = Post.objects.all()
+
+
+        filters = Q()
+
+        post_name = self.request.query_params.get('post_name')
+        
+        created_by = self.request.query_params.get('created_by')
+
+        hashtag = self.request.query_params.get('hashtag')
+
+        is_delete = self.request.query_params.get('is_delete')
+
+        if created_by:
+            filters &= Q(created_by__user__username=created_by)
+        
+        if hashtag:
+            filters &= Q(hashtag__name=hashtag)
+
+        if post_name:
+            filters &= Q(post_name=post_name)
+        #     queryset = queryset.annotate(name = F('created_by__user__username'),email_id = F('created_by__user__email')).values('name','email_id')
+
+        if is_delete:
+            filters &= Q(is_delete=is_delete)
+
+        if filters:
+            queryset = queryset.filter(filters).annotate(name=F('created_by__user__username'),email_id = F('created_by__user__email'),hashtag_name= F('hashtag__name')).values()
+        print("query_set:",queryset)
+        return queryset
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        # serializer = self.get_serializer(queryset, many=True)
+        # return Response({"result": serializer.data})
+        return Response({"result": queryset})
     
+
+# class PostAPIView(APIView):
+#     def post(self,request):
+#         post_name = self.request.query_params.get('post_name')
+#         hashtag = self.request.query_params.get('hashtag')
+#         created_by = self.request.query_params.get('created_by')
+#         created_at = self.request.query_params.get('created_at')
+#         description = self.request.query_params.get('description')
+#         caption =  self.request.query_params.get('caption')
+#         is_delete = self.request.query_params.get('is_delete','')
+    
+#         object = Post.objects.create(post_name=post_name,hashtag=hashtag,created_by=created_by,created_at=created_at,description=description,caption=caption,is_delete=is_delete)
+    
+class PostView(APIView):
+    def get(self, request):
+        posts = Post.objects.all()
+        serializer = PostSerializer(posts, many=True)
+        return Response(serializer.data)
+    
+    def post(self, request):
+        serializer = PostSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
+    
+    def put(self, request):
+        try:
+            post = Post.objects.get(id=request.data['id'])
+        except Post.DoesNotExist:
+            return Response({'error': 'Post does not exist.'})
+        
+        serializer = PostSerializer(post, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
+
+
+
+
+
+
+class PostNewView(APIView):
+    def get(self,request):
+        posts = Post.objects.all()
+        data = []
+        for post in posts:
+            post_data = {
+                'post_name': post.post_name,
+                'hashtag': [hashtag.name for hashtag in post.hashtag.all()],
+                'created_by': post.created_by.employee_id,
+                'created_at': post.created_at,
+                'description': post.description,
+                'caption': post.caption,
+                'is_delete': post.is_delete
+            }
+            data.append(post_data)
+        return Response(data)
+
+    def post(self, request):
+        # import pdb; pdb.set_trace()
+        post_data = {
+            'post_name': request.data.get('post_name'),
+            # 'hashtag': request.data.get('hashtag'),
+            'created_at': request.data.get('created_at'),
+            'description': request.data.get('description'),
+            'caption': request.data.get('caption'),
+            'is_delete': request.data.get('is_delete')
+        }
+        employee_id = request.data.get('created_by')    
+        try:
+            employee = Employee.objects.get(employee_id=employee_id)
+        except Employee.DoesNotExist:
+            return Response({'error': 'Employee does not exist.'})
+        post_data['created_by'] = employee
+
+        hashtag = request.data.get('hashtag')
+
+        post = Post.objects.create(**post_data)
+        post.hashtag.add(*hashtag)
+        return Response({"post created":"success"})
+    
+    # def put(self,request):
